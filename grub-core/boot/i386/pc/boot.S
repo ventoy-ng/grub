@@ -478,11 +478,14 @@ LOCAL(general_error):
 LOCAL(stop):
 	jmp	LOCAL(stop)
 
-notification_string:	.asciz "GRUB "
-geometry_error_string:	.asciz "Geom"
-hd_probe_error_string:	.asciz "Hard Disk"
-read_error_string:	.asciz "Read"
-general_error_string:	.asciz " Error\r\n"
+ventoy_uuid:	.ascii  "XXXXXXXXXXXXXXXX"
+notification_string:	.asciz "GR"
+geometry_error_string:	.asciz "Ge"
+hd_probe_error_string:	.asciz "HD"
+read_error_string:	.asciz "Rd"
+general_error_string:	.asciz " Er\r\n"
+
+
 
 /*
  * message: write the string pointed to by %si

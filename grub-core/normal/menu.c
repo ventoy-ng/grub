@@ -758,7 +758,7 @@ run_menu (grub_menu_t menu, int nested, int *auto_boot)
 
 	    case '\n':
 	    case '\r':
-	    case GRUB_TERM_KEY_RIGHT:
+	//    case GRUB_TERM_KEY_RIGHT:
 	    case GRUB_TERM_CTRL | 'f':
 	      menu_fini ();
               *auto_boot = 0;

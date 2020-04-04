@@ -141,6 +141,8 @@ grub_cmd_blocklist (grub_command_t cmd __attribute__ ((unused)),
   if (ctx.num_sectors > 0)
     print_blocklist (ctx.start_sector, ctx.num_sectors, 0, 0, &ctx);
 
+  grub_printf("\nentry number:%d \n", ctx.num_entries);
+
   grub_file_close (file);
 
   return grub_errno;

@@ -28,8 +28,20 @@
 #include <grub/charset.h>
 #include <grub/datetime.h>
 #include <grub/udf.h>
+#include <grub/ventoy.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
+
+#define OFFSET_OF(TYPE, MEMBER) ((grub_size_t) &((TYPE *)0)->MEMBER)
+
+grub_uint32_t g_last_disk_read_sector = 0;
+grub_uint32_t g_last_fe_tag_ident = 0;
+grub_uint32_t g_last_icb_read_sector = 0;
+grub_uint32_t g_last_icb_read_sector_tag_ident = 0;
+grub_uint32_t g_last_fileattr_read_sector = 0;
+grub_uint32_t g_last_fileattr_read_sector_tag_ident = 0;
+grub_uint32_t g_last_fileattr_offset = 0;
+grub_uint64_t g_last_pd_length_offset = 0;
 
 #define GRUB_UDF_MAX_PDS		2
 #define GRUB_UDF_MAX_PMS		6
@@ -441,6 +453,9 @@ grub_udf_read_icb (struct grub_udf_data *data,
 		      &node->block))
     return grub_errno;
 
+  g_last_disk_read_sector = block;
+  g_last_fe_tag_ident = U16(node->block.fe.tag.tag_ident);
+
   if ((U16 (node->block.fe.tag.tag_ident) != GRUB_UDF_TAG_IDENT_FE) &&
       (U16 (node->block.fe.tag.tag_ident) != GRUB_UDF_TAG_IDENT_EFE))
     return grub_error (GRUB_ERR_BAD_FS, "invalid fe/efe descriptor");
@@ -745,6 +760,8 @@ grub_udf_mount (grub_disk_t disk)
 	      goto fail;
 	    }
 
+      g_last_pd_length_offset = (block << lbshift) * 512 + OFFSET_OF(struct grub_udf_pd, length);
+
 	  data->npd++;
 	}
       else if (tag.tag_ident == GRUB_UDF_TAG_IDENT_LVD)
@@ -956,6 +973,8 @@ grub_udf_iterate_dir (grub_fshelp_node_t dir,
           if (grub_udf_read_icb (dir->data, &dirent.icb, child))
 	    return 0;
 
+          g_last_icb_read_sector = g_last_disk_read_sector;
+          g_last_icb_read_sector_tag_ident = g_last_fe_tag_ident;
           if (dirent.characteristics & GRUB_UDF_FID_CHAR_PARENT)
 	    {
 	      /* This is the parent directory.  */
@@ -985,6 +1004,9 @@ grub_udf_iterate_dir (grub_fshelp_node_t dir,
 
 	      if (filename && hook (filename, type, child, hook_data))
 		{
+		    g_last_fileattr_read_sector = g_last_icb_read_sector;
+            g_last_fileattr_read_sector_tag_ident = g_last_icb_read_sector_tag_ident;
+            g_last_fileattr_offset = (grub_uint32_t)((child->block.fe.ext_attr + child->block.fe.ext_attr_length) - (grub_uint8_t *)&(child->block.fe));
 		  grub_free (filename);
 		  return 1;
 		}
@@ -1341,6 +1363,51 @@ grub_udf_uuid (grub_device_t device, char **uuid)
     *uuid = 0;
 
   return grub_errno;
+}
+
+grub_uint64_t grub_udf_get_file_offset(grub_file_t file)
+{
+    grub_disk_addr_t sector;
+    struct grub_fshelp_node *node = (struct grub_fshelp_node *)file->data;
+    
+    sector = grub_udf_read_block(node, 0);
+    
+    return 512 * (sector << node->data->lbshift);
+}
+
+grub_uint64_t grub_udf_get_last_pd_size_offset(void)
+{
+    return g_last_pd_length_offset;
+}
+
+grub_uint64_t grub_udf_get_last_file_attr_offset
+(
+    grub_file_t file, 
+    grub_uint32_t *startBlock,
+    grub_uint64_t *fe_entry_size_offset
+)
+{
+    grub_uint64_t attr_offset;
+    struct grub_fshelp_node *node;
+    struct grub_udf_data *data;
+
+    node = (struct grub_fshelp_node *)file->data;
+    data = node->data;
+
+    *startBlock = data->pds[data->pms[0]->type1.part_num].start;
+
+    attr_offset = g_last_fileattr_read_sector * 2048 + g_last_fileattr_offset;
+    
+    if (GRUB_UDF_TAG_IDENT_FE == g_last_fileattr_read_sector_tag_ident)
+    {
+        *fe_entry_size_offset = g_last_fileattr_read_sector * 2048 + OFFSET_OF(struct grub_udf_file_entry, file_size);
+    }
+    else
+    {
+        *fe_entry_size_offset = g_last_fileattr_read_sector * 2048 + OFFSET_OF(struct grub_udf_extended_file_entry, file_size);
+    }
+
+    return attr_offset;
 }
 
 static struct grub_fs grub_udf_fs = {

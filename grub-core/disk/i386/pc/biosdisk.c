@@ -329,6 +329,68 @@ grub_biosdisk_iterate (grub_disk_dev_iterate_hook_t hook, void *hook_data,
   return 0;
 }
 
+#pragma pack(1)
+typedef struct ventoy_part_table
+{
+    grub_uint8_t  Active; // 0x00  0x80
+
+    grub_uint8_t  StartHead;
+    grub_uint16_t StartSector : 6;
+    grub_uint16_t StartCylinder : 10;
+
+    grub_uint8_t  FsFlag;
+
+    grub_uint8_t  EndHead;
+    grub_uint16_t EndSector : 6;
+    grub_uint16_t EndCylinder : 10;
+
+    grub_uint32_t StartSectorId;
+    grub_uint32_t SectorCount;
+}ventoy_part_table;
+
+typedef struct ventoy_mbr_head
+{
+    grub_uint8_t BootCode[446];
+    ventoy_part_table PartTbl[4];
+    grub_uint8_t Byte55;
+    grub_uint8_t ByteAA;
+}ventoy_mbr_head;
+#pragma pack()
+
+static grub_err_t
+grub_biosdisk_rw (int cmd, grub_disk_t disk,
+		  grub_disk_addr_t sector, grub_size_t size,
+		  unsigned segment);
+
+static int ventoy_is_mbr_match(ventoy_mbr_head *head)
+{
+    grub_uint32_t PartStartSector;
+    
+    if (head->Byte55 != 0x55 || head->ByteAA != 0xAA) {
+        return 0;
+    }
+    
+    if (head->PartTbl[2].SectorCount > 0 || head->PartTbl[3].SectorCount > 0) {
+        return 0;
+    }
+
+    if (head->PartTbl[0].FsFlag != 0x07 || head->PartTbl[0].StartSectorId != 2048) {
+        return 0;
+    }
+
+    if (head->PartTbl[1].Active != 0x80 || head->PartTbl[1].FsFlag != 0xEF) {
+        return 0;
+    }
+
+    PartStartSector = head->PartTbl[0].StartSectorId + head->PartTbl[0].SectorCount;
+
+    if (head->PartTbl[1].StartSectorId != PartStartSector || head->PartTbl[1].SectorCount != 65536) {
+        return 0;
+    }
+
+    return 1;
+}
+
 static grub_err_t
 grub_biosdisk_open (const char *name, grub_disk_t disk)
 {
@@ -439,6 +501,20 @@ grub_biosdisk_open (const char *name, grub_disk_t disk)
 		       < GRUB_MEMORY_MACHINE_SCRATCH_SIZE);
 
   disk->data = data;
+
+  //fixup some buggy bios
+  if (total_sectors > (16434495 - 2097152) && total_sectors < (16434495 + 2097152) && 
+      (data->flags & GRUB_BIOSDISK_FLAG_LBA) > 0 && (data->flags & GRUB_BIOSDISK_FLAG_CDROM) == 0) {
+    if (grub_biosdisk_rw(0, disk, 0, 1, GRUB_MEMORY_MACHINE_SCRATCH_SEG) == 0) {
+        ventoy_mbr_head *mbr = (ventoy_mbr_head *)GRUB_MEMORY_MACHINE_SCRATCH_ADDR;
+        if (ventoy_is_mbr_match(mbr)) {
+            total_sectors = mbr->PartTbl[1].StartSectorId + mbr->PartTbl[1].SectorCount + 1;
+            if (disk->total_sectors < total_sectors) {
+                disk->total_sectors = total_sectors;
+            }
+        }
+    }
+  }
 
   return GRUB_ERR_NONE;
 }

@@ -1573,6 +1573,18 @@ module = {
   common = gfxmenu/gui_string_util.c;
 };
 
+/* Added by longpanda for Ventoy Project */
+module = {
+  name = ventoy;
+  common = ventoy/ventoy.c;
+  common = ventoy/ventoy_linux.c;
+  common = ventoy/ventoy_windows.c;
+  common = ventoy/ventoy_plugin.c;
+  common = ventoy/ventoy_json.c;
+  common = ventoy/lzx.c;
+  common = ventoy/huffman.c;
+};
+
 module = {
   name = hello;
   common = hello/hello.c;

@@ -28,8 +28,16 @@
 #include <grub/fshelp.h>
 #include <grub/charset.h>
 #include <grub/datetime.h>
+#include <grub/ventoy.h>
 
 GRUB_MOD_LICENSE ("GPLv3+");
+
+static grub_uint64_t g_ventoy_last_read_pos = 0;
+static grub_uint64_t g_ventoy_last_read_offset = 0;
+static grub_uint64_t g_ventoy_last_read_dirent_pos = 0;
+static grub_uint64_t g_ventoy_last_read_dirent_offset = 0;
+static grub_uint64_t g_ventoy_last_file_dirent_pos = 0;
+static grub_uint64_t g_ventoy_last_file_dirent_offset = 0;
 
 #define GRUB_ISO9660_FSTYPE_DIR		0040000
 #define GRUB_ISO9660_FSTYPE_REG		0100000
@@ -242,9 +250,9 @@ read_node (grub_fshelp_node_t node, grub_off_t off, grub_size_t len, char *buf)
       toread = grub_le_to_cpu32 (node->dirents[i].size);
       if (toread > len)
 	toread = len;
-      err = grub_disk_read (node->data->disk,
-			    ((grub_disk_addr_t) grub_le_to_cpu32 (node->dirents[i].first_sector)) << GRUB_ISO9660_LOG2_BLKSZ,
-			    off, toread, buf);
+      g_ventoy_last_read_pos = ((grub_disk_addr_t) grub_le_to_cpu32 (node->dirents[i].first_sector)) << GRUB_ISO9660_LOG2_BLKSZ;
+      g_ventoy_last_read_offset = off;
+      err = grub_disk_read (node->data->disk, g_ventoy_last_read_pos, off, toread, buf);
       if (err)
 	return err;
       len -= toread;
@@ -672,6 +680,11 @@ grub_iso9660_iterate_dir (grub_fshelp_node_t dir,
       if (read_node (dir, offset, sizeof (dirent), (char *) &dirent))
 	return 0;
 
+      if ((dirent.flags & FLAG_TYPE) != FLAG_TYPE_DIR) {
+        g_ventoy_last_read_dirent_pos = g_ventoy_last_read_pos;
+        g_ventoy_last_read_dirent_offset = g_ventoy_last_read_offset;
+      }
+
       /* The end of the block, skip to the next one.  */
       if (!dirent.len)
 	{
@@ -824,6 +837,8 @@ grub_iso9660_iterate_dir (grub_fshelp_node_t dir,
 	  }
 	if (hook (ctx.filename, ctx.type, node, hook_data))
 	  {
+        g_ventoy_last_file_dirent_pos = g_ventoy_last_read_dirent_pos;
+        g_ventoy_last_file_dirent_offset = g_ventoy_last_read_dirent_offset;
 	    if (ctx.filename_alloc)
 	      grub_free (ctx.filename);
 	    return 1;
@@ -1093,8 +1108,17 @@ grub_iso9660_mtime (grub_device_t device, grub_int32_t *timebuf)
   return err;
 }
 
+grub_uint64_t grub_iso9660_get_last_read_pos(grub_file_t file)
+{
+    (void)file;
+    return (g_ventoy_last_read_pos << GRUB_DISK_SECTOR_BITS);
+}
 
-
+grub_uint64_t grub_iso9660_get_last_file_dirent_pos(grub_file_t file)
+{
+    (void)file;
+    return (g_ventoy_last_file_dirent_pos << GRUB_DISK_SECTOR_BITS) + g_ventoy_last_file_dirent_offset;
+}
 
 static struct grub_fs grub_iso9660_fs =
   {

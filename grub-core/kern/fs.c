@@ -27,6 +27,7 @@
 #include <grub/mm.h>
 #include <grub/term.h>
 #include <grub/i18n.h>
+#include <grub/env.h>
 
 grub_fs_t grub_fs_list = 0;
 
@@ -45,11 +46,63 @@ grub_fs_t
 grub_fs_probe (grub_device_t device)
 {
   grub_fs_t p;
+  const char *first_probe;
+  grub_size_t len;
 
   if (device->disk)
     {
       /* Make it sure not to have an infinite recursive calls.  */
       static int count = 0;
+
+      first_probe = grub_env_get("ventoy_fs_probe");
+      if (!first_probe)
+      {
+          first_probe = "iso9660";
+      }
+      len = grub_strlen(first_probe);
+
+      /* use iso9660 first */
+      for (p = grub_fs_list; p; p = p->next)
+      {
+          if (grub_strncmp(p->name, first_probe, len) == 0)
+          {
+              break;
+          }
+      }
+
+      if (p)
+      {
+	  grub_dprintf ("fs", "Detecting %s...\n", p->name);
+
+	  /* This is evil: newly-created just mounted BtrFS after copying all
+	     GRUB files has a very peculiar unrecoverable corruption which
+	     will be fixed at sync but we'd rather not do a global sync and
+	     syncing just files doesn't seem to help. Relax the check for
+	     this time.  */
+#ifdef GRUB_UTIL
+	  if (grub_strcmp (p->name, "btrfs") == 0)
+	    {
+	      char *label = 0;
+	      p->fs_uuid (device, &label);
+	      if (label)
+		grub_free (label);
+	    }
+	  else
+#endif
+	    (p->fs_dir) (device, "/", probe_dummy_iter, NULL);
+	  if (grub_errno == GRUB_ERR_NONE)
+	    return p;
+
+	  grub_error_push ();
+	  grub_dprintf ("fs", "%s detection failed.\n", p->name);
+	  grub_error_pop ();
+
+	  if (grub_errno != GRUB_ERR_BAD_FS
+	      && grub_errno != GRUB_ERR_OUT_OF_RANGE)
+	    return 0;
+
+	  grub_errno = GRUB_ERR_NONE;
+	}
 
       for (p = grub_fs_list; p; p = p->next)
 	{
