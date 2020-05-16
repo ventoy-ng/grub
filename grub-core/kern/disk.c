@@ -25,6 +25,7 @@
 #include <grub/time.h>
 #include <grub/file.h>
 #include <grub/i18n.h>
+#include <grub/ventoy.h>
 
 #define	GRUB_CACHE_TIMEOUT	2
 
@@ -408,11 +409,66 @@ grub_disk_read_small (grub_disk_t disk, grub_disk_addr_t sector,
   return GRUB_ERR_NONE;
 }
 
+grub_err_t grub_disk_blocklist_read(void *chunklist, grub_uint64_t sector, 
+    grub_uint64_t size, grub_uint32_t log_sector_size)
+{
+    ventoy_img_chunk *last_chunk = NULL;
+    ventoy_img_chunk *new_chunk = NULL;
+    ventoy_img_chunk_list *chunk_list = (ventoy_img_chunk_list *)chunklist;
+
+    if (chunk_list->cur_chunk == 0)
+    {
+        chunk_list->chunk[0].img_start_sector = 0;
+        chunk_list->chunk[0].img_end_sector = (size >> 11) - 1;
+        chunk_list->chunk[0].disk_start_sector = sector;
+        chunk_list->chunk[0].disk_end_sector = sector + (size >> log_sector_size) - 1;
+        chunk_list->cur_chunk = 1;
+        return 0;
+    }
+
+    last_chunk = chunk_list->chunk + chunk_list->cur_chunk - 1;
+    if (last_chunk->disk_end_sector + 1 == sector)
+    {
+        last_chunk->img_end_sector  += (size >> 11);
+        last_chunk->disk_end_sector += (size >> log_sector_size);
+        return 0;
+    }
+
+    if (chunk_list->cur_chunk == chunk_list->max_chunk)
+    {
+        new_chunk = grub_realloc(chunk_list->chunk, chunk_list->max_chunk * 2 * sizeof(ventoy_img_chunk));
+        if (NULL == new_chunk)
+        {
+            return -1;
+        }
+        chunk_list->chunk = new_chunk;
+        chunk_list->max_chunk *= 2;
+
+        /* issue: update last_chunk */
+        last_chunk = chunk_list->chunk + chunk_list->cur_chunk - 1;
+    }
+
+    new_chunk = chunk_list->chunk + chunk_list->cur_chunk;
+    new_chunk->img_start_sector = last_chunk->img_end_sector + 1;
+    new_chunk->img_end_sector = new_chunk->img_start_sector + (size >> 11) - 1;
+    new_chunk->disk_start_sector = sector;
+    new_chunk->disk_end_sector = sector + (size >> log_sector_size) - 1;
+
+    chunk_list->cur_chunk++;
+
+    return 0;
+}
+
 /* Read data from the disk.  */
 grub_err_t
 grub_disk_read (grub_disk_t disk, grub_disk_addr_t sector,
 		grub_off_t offset, grub_size_t size, void *buf)
 {
+    if (disk->read_hook == (grub_disk_read_hook_t)grub_disk_blocklist_read)
+    {
+        return grub_disk_blocklist_read((ventoy_img_chunk_list *)disk->read_hook_data, sector, size, disk->log_sector_size);
+    }
+
   /* First of all, check if the region is within the disk.  */
   if (grub_disk_adjust_range (disk, &sector, &offset, size) != GRUB_ERR_NONE)
     {

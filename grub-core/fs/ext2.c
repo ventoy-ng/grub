@@ -953,6 +953,8 @@ grub_ext2_dir_iter (const char *filename, enum grub_fshelp_filetype filetype,
     }
 
   info.dir = ((filetype & GRUB_FSHELP_TYPE_MASK) == GRUB_FSHELP_DIR);
+  if (!info.dir)
+    info.size = (((grub_off_t) grub_le_to_cpu32 (node->inode.size_high)) << 32) | grub_le_to_cpu32 (node->inode.size);
   grub_free (node);
   return ctx->hook (filename, &info, ctx->hook_data);
 }

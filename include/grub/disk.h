@@ -195,6 +195,9 @@ grub_disk_dev_iterate (grub_disk_dev_iterate_hook_t hook, void *hook_data)
 
 grub_disk_t EXPORT_FUNC(grub_disk_open) (const char *name);
 void EXPORT_FUNC(grub_disk_close) (grub_disk_t disk);
+grub_err_t EXPORT_FUNC(grub_disk_blocklist_read)(void *chunklist, grub_uint64_t sector, 
+    grub_uint64_t size, grub_uint32_t log_sector_size);
+
 grub_err_t EXPORT_FUNC(grub_disk_read) (grub_disk_t disk,
 					grub_disk_addr_t sector,
 					grub_off_t offset,
