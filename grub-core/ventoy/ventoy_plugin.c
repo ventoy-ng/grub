@@ -40,6 +40,34 @@ GRUB_MOD_LICENSE ("GPLv3+");
 
 static install_template *g_install_template_head = NULL;
 
+static int ventoy_plugin_control_entry(VTOY_JSON *json, const char *isodisk)
+{
+    VTOY_JSON *pNode = NULL;
+    VTOY_JSON *pChild = NULL;
+
+    (void)isodisk;
+
+    if (json->enDataType != JSON_TYPE_ARRAY)
+    {
+        debug("Not array %d\n", json->enDataType);
+        return 0;
+    }
+
+    for (pNode = json->pstChild; pNode; pNode = pNode->pstNext)
+    {
+        if (pNode->enDataType == JSON_TYPE_OBJECT)
+        {
+            pChild = pNode->pstChild;
+            if (pChild->enDataType == JSON_TYPE_STRING && pChild->pcName && pChild->unData.pcStrVal)
+            {
+                ventoy_set_env(pChild->pcName, pChild->unData.pcStrVal);
+            }
+        }
+    }
+
+    return 0;
+}
+
 static int ventoy_plugin_theme_entry(VTOY_JSON *json, const char *isodisk)
 {
     const char *value;
@@ -136,6 +164,7 @@ static int ventoy_plugin_auto_install_entry(VTOY_JSON *json, const char *isodisk
 
 static plugin_entry g_plugin_entries[] = 
 {
+    { "control", ventoy_plugin_control_entry },
     { "theme", ventoy_plugin_theme_entry },
     { "auto_install", ventoy_plugin_auto_install_entry },
 };

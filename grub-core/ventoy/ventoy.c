@@ -49,7 +49,7 @@ initrd_info *g_initrd_img_list = NULL;
 initrd_info *g_initrd_img_tail = NULL;
 int g_initrd_img_count = 0;
 int g_valid_initrd_count = 0;
-
+int g_filt_dot_underscore_file = 0;
 static grub_file_t g_old_file;
 
 char g_img_swap_tmp_buf[1024];
@@ -618,6 +618,11 @@ static int ventoy_img_name_valid(const char *filename, grub_size_t namelen)
 {
     grub_size_t i;
 
+    if (g_filt_dot_underscore_file && filename[0] == '.' && filename[1] == '_')
+    {
+        return 0;
+    }
+
     for (i = 0; i < namelen; i++)
     {
         if (filename[i] == ' ' || filename[i] == '\t')
@@ -938,6 +943,7 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     grub_device_t dev = NULL;
     img_info *cur = NULL;
     img_info *tail = NULL;
+    const char *strdata = NULL;
     char *device_name = NULL;
     char buf[32];
     img_iterator_node *node = NULL;
@@ -953,6 +959,12 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
     if (g_ventoy_img_list || g_ventoy_img_count)
     {
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Must clear image before list");
+    }
+
+    strdata = ventoy_get_env("VTOY_FILT_DOT_UNDERSCORE_FILE");
+    if (strdata && strdata[0] == '1' && strdata[1] == 0)
+    {
+        g_filt_dot_underscore_file = 1;
     }
 
     device_name = grub_file_get_device_name(args[0]);
