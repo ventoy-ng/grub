@@ -206,6 +206,7 @@ grub_file_filter_unregister (grub_file_filter_id_t id)
 /* Get a device name from NAME.  */
 char *EXPORT_FUNC(grub_file_get_device_name) (const char *name);
 
+int EXPORT_FUNC(ventoy_check_file_exist) (const char * fmt, ...);
 grub_file_t EXPORT_FUNC(grub_file_open) (const char *name, enum grub_file_type type);
 grub_ssize_t EXPORT_FUNC(grub_file_read) (grub_file_t file, void *buf,
 					  grub_size_t len);

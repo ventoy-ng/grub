@@ -29,6 +29,8 @@
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
+static int g_test_case_insensitive = 0;
+
 /* A simple implementation for signed numbers. */
 static int
 grub_strtosl (char *arg, char **end, int base)
@@ -61,9 +63,13 @@ static int
 find_file (const char *cur_filename, const struct grub_dirhook_info *info,
 	   void *data)
 {
+  int case_insensitive = 0;
   struct test_parse_ctx *ctx = data;
 
-  if ((info->case_insensitive ? grub_strcasecmp (cur_filename, ctx->filename)
+  if (g_test_case_insensitive || info->case_insensitive)
+    case_insensitive = 1;
+
+  if ((case_insensitive ? grub_strcasecmp (cur_filename, ctx->filename)
        : grub_strcmp (cur_filename, ctx->filename)) == 0)
     {
       ctx->file_info = *info;
@@ -334,6 +340,16 @@ test_parse (char **args, int *argn, int argc)
 	      (*argn) += 2;
 	      continue;
 	    }
+      
+	  if (grub_strcmp (args[*argn], "-D") == 0)
+	    {
+	      g_test_case_insensitive = 1;
+	      get_fileinfo (args[*argn + 1], &ctx);
+          g_test_case_insensitive = 0;
+	      update_val (ctx.file_exists && ctx.file_info.dir, &ctx);
+	      (*argn) += 2;
+	      continue;
+	    }
 
 	  if (grub_strcmp (args[*argn], "-e") == 0)
 	    {
@@ -342,10 +358,30 @@ test_parse (char **args, int *argn, int argc)
 	      (*argn) += 2;
 	      continue;
 	    }
+      
+	  if (grub_strcmp (args[*argn], "-E") == 0)
+	    {
+	      g_test_case_insensitive = 1;
+	      get_fileinfo (args[*argn + 1], &ctx);
+          g_test_case_insensitive = 0;
+	      update_val (ctx.file_exists, &ctx);
+	      (*argn) += 2;
+	      continue;
+	    }
 
 	  if (grub_strcmp (args[*argn], "-f") == 0)
 	    {
 	      get_fileinfo (args[*argn + 1], &ctx);
+	      /* FIXME: check for other types. */
+	      update_val (ctx.file_exists && ! ctx.file_info.dir, &ctx);
+	      (*argn) += 2;
+	      continue;
+	    }
+	  if (grub_strcmp (args[*argn], "-F") == 0)
+	    {
+	      g_test_case_insensitive = 1;
+	      get_fileinfo (args[*argn + 1], &ctx);
+          g_test_case_insensitive = 0;
 	      /* FIXME: check for other types. */
 	      update_val (ctx.file_exists && ! ctx.file_info.dir, &ctx);
 	      (*argn) += 2;
