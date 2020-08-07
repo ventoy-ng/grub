@@ -98,6 +98,8 @@ struct grub_module_info64
 
 extern grub_addr_t EXPORT_VAR (grub_modbase);
 
+void EXPORT_FUNC(ventoy_env_hook_root)(int hook);
+
 #define FOR_MODULES(var)  for (\
   var = (grub_modbase && ((((struct grub_module_info *) grub_modbase)->magic) == GRUB_MODULE_MAGIC)) ? (struct grub_module_header *) \
     (grub_modbase + (((struct grub_module_info *) grub_modbase)->offset)) : 0;\
