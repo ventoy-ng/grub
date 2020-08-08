@@ -962,7 +962,7 @@ write_entry (struct output_buffer *outbuf,
 	    initrd = ptr + sizeof ("initrd=") - 1;
 	    for (initrde = initrd; *initrde && !grub_isspace (*initrde); initrde++);
 	  }
-	print_string (" if test x$grub_platform = xpc; then "
+	print_string (" if test x$ventoy_linux_16 = x1; then "
 		      "linux_suffix=16; else linux_suffix= ; fi\n");
 	print_string ("  linux$linux_suffix ");
 	print_file (outbuf, menu, curentry->kernel_file, NULL);
