@@ -553,7 +553,7 @@ init_terminal (grub_gfxmenu_view_t view)
 static void
 init_background (grub_gfxmenu_view_t view)
 {
-  if (view->scaled_desktop_image)
+  if (view->scaled_desktop_image || (!view->raw_desktop_image))
     return;
 
   struct grub_video_bitmap *scaled_bitmap;
