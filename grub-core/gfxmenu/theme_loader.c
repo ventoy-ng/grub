@@ -31,6 +31,7 @@
 #include <grub/gfxmenu_view.h>
 #include <grub/gui.h>
 #include <grub/color.h>
+#include <grub/env.h>
 
 static grub_err_t
 parse_proportional_spec (const char *value, signed *abs, grub_fixed_signed_t *prop);
@@ -751,7 +752,7 @@ grub_gfxmenu_view_load_theme (grub_gfxmenu_view_t view, const char *theme_path)
     }
 
   p.len = grub_file_size (file);
-  p.buf = grub_malloc (p.len);
+  p.buf = grub_malloc (p.len + 4096);
   p.pos = 0;
   p.line_num = 1;
   p.col_num = 1;
@@ -769,6 +770,16 @@ grub_gfxmenu_view_load_theme (grub_gfxmenu_view_t view, const char *theme_path)
       grub_free (p.theme_dir);
       return grub_errno;
     }
+
+{
+  const char *checkret = grub_env_get("VTOY_CHKDEV_RESULT_STRING");
+  if (checkret == NULL || checkret[0] != '0')
+  {
+    p.len += grub_snprintf(p.buf + p.len, 4096, "\n+ hbox{\n    left = 1%%\n    top = 90%%\n"
+      "    + label {text = \"[Unofficial Ventoy]\" color = \"red\" align = \"left\"}\n"
+      "}\n");    
+  }
+}
 
   if (view->canvas)
     view->canvas->component.ops->destroy (view->canvas);
