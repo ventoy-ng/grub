@@ -33,6 +33,10 @@
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
+static int g_no_vtoyefi_part = 0;
+static char g_vtoyefi_dosname[64];
+static char g_vtoyefi_gptname[64];
+
 struct cache_entry
 {
   struct cache_entry *next;
@@ -65,6 +69,10 @@ iterate_device (const char *name, void *data)
   if (ctx->no_floppy &&
       name[0] == 'f' && name[1] == 'd' && name[2] >= '0' && name[2] <= '9')
     return 1;
+
+  if (g_no_vtoyefi_part && (grub_strcmp(name, g_vtoyefi_dosname) == 0 || grub_strcmp(name, g_vtoyefi_gptname) == 0)) {
+    return 0;
+  }
 
 #ifdef DO_SEARCH_FS_UUID
 #define compare_fn grub_strcasecmp
@@ -274,6 +282,14 @@ FUNC_NAME (const char *key, const char *var, int no_floppy,
     .is_cache = 0
   };
   grub_fs_autoload_hook_t saved_autoload;
+
+  g_no_vtoyefi_part = 0;
+  if (grub_env_get("VTOY_SEARCH_NO_VTOYEFI"))
+  {
+      grub_snprintf(g_vtoyefi_dosname, sizeof(g_vtoyefi_dosname), "%s,msdos2", grub_env_get("vtoydev"));
+      grub_snprintf(g_vtoyefi_gptname, sizeof(g_vtoyefi_gptname), "%s,gpt2", grub_env_get("vtoydev"));
+      g_no_vtoyefi_part = 1;
+  }
 
   /* First try without autoloading if we're setting variable. */
   if (var)
