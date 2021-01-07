@@ -83,6 +83,7 @@ grub_xputs_dumb (const char *str)
 
 void (*grub_xputs) (const char *str) = grub_xputs_dumb;
 
+int (*grub_key_remap)(int key) = NULL;
 int
 grub_getkey_noblock (void)
 {
@@ -97,6 +98,8 @@ grub_getkey_noblock (void)
   FOR_ACTIVE_TERM_INPUTS(term)
   {
     int key = term->getkey (term);
+    if (grub_key_remap)
+        key = grub_key_remap(key);
     if (key != GRUB_TERM_NO_KEY)
       return key;
   }
