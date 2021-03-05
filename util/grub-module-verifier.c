@@ -119,6 +119,19 @@ struct grub_module_verifier_arch archs[] = {
       R_AARCH64_PREL32,
       -1
     } },
+  { "mips64el", 8, 0, EM_MIPS, GRUB_MODULE_VERIFY_SUPPORTS_REL | GRUB_MODULE_VERIFY_SUPPORTS_RELA, (int[]){
+      R_MIPS_64,
+      R_MIPS_32,
+      R_MIPS_26,
+      R_MIPS_LO16,
+      R_MIPS_HI16,
+      R_MIPS_HIGHER,
+      R_MIPS_HIGHEST,
+      -1
+    }, (int[]){
+      -1
+    }
+  },
   { "riscv32", 4, 0, EM_RISCV, GRUB_MODULE_VERIFY_SUPPORTS_REL | GRUB_MODULE_VERIFY_SUPPORTS_RELA, (int[]){
       R_RISCV_32,
       R_RISCV_64,

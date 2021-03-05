@@ -43,7 +43,7 @@ grub_arch_sync_dma_caches (volatile void *address __attribute__ ((unused)),
 			   grub_size_t len __attribute__ ((unused)))
 {
 }
-#else
+#elif defined(__mips__) && (_MIPS_SIM != _ABI64)
 void EXPORT_FUNC(grub_arch_sync_dma_caches) (volatile void *address, grub_size_t len);
 #endif
 #endif

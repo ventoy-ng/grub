@@ -123,6 +123,7 @@ prepare_grub_to_access_device ()
   old_ifs="$IFS"
   IFS='
 '
+:<<\EOF
   partmap="`"${grub_probe}" --device $@ --target=partmap`"
   for module in ${partmap} ; do
     case "${module}" in
@@ -132,6 +133,7 @@ prepare_grub_to_access_device ()
         echo "insmod part_${module}";;
     esac
   done
+EOF
 
   # Abstraction modules aren't auto-loaded.
   abstraction="`"${grub_probe}" --device $@ --target=abstraction`"
@@ -139,10 +141,10 @@ prepare_grub_to_access_device ()
     echo "insmod ${module}"
   done
 
-  fs="`"${grub_probe}" --device $@ --target=fs`"
-  for module in ${fs} ; do
-    echo "insmod ${module}"
-  done
+#  fs="`"${grub_probe}" --device $@ --target=fs`"
+#  for module in ${fs} ; do
+#    echo "insmod ${module}"
+#  done
 
   if [ x$GRUB_ENABLE_CRYPTODISK = xy ]; then
       for uuid in `"${grub_probe}" --device $@ --target=cryptodisk_uuid`; do
