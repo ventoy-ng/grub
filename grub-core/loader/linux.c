@@ -4,6 +4,8 @@
 #include <grub/misc.h>
 #include <grub/file.h>
 #include <grub/mm.h>
+#include <grub/env.h>
+#include <grub/term.h>
 
 struct newc_head
 {
@@ -244,6 +246,8 @@ grub_initrd_close (struct grub_linux_initrd_context *initrd_ctx)
   initrd_ctx->components = 0;
 }
 
+extern int ventoy_need_prompt_load_file(void);
+extern grub_ssize_t ventoy_load_file_with_prompt(grub_file_t file, void *buf, grub_ssize_t size);
 grub_err_t
 grub_initrd_load (struct grub_linux_initrd_context *initrd_ctx,
 		  char *argv[], void *target)
@@ -253,7 +257,8 @@ grub_initrd_load (struct grub_linux_initrd_context *initrd_ctx,
   int newc = 0;
   struct dir *root = 0;
   grub_ssize_t cursize = 0;
-
+  grub_ssize_t readsize = 0;
+  
   for (i = 0; i < initrd_ctx->nfiles; i++)
     {
       grub_memset (ptr, 0, ALIGN_UP_OVERHEAD (cursize, 4));
@@ -278,9 +283,18 @@ grub_initrd_load (struct grub_linux_initrd_context *initrd_ctx,
 	  newc = 0;
 	}
 
-      cursize = initrd_ctx->components[i].size;
-      if (grub_file_read (initrd_ctx->components[i].file, ptr, cursize)
-	  != cursize)
+    cursize = initrd_ctx->components[i].size;
+    if (ventoy_need_prompt_load_file() && initrd_ctx->components[i].newc_name && 
+        grub_strcmp(initrd_ctx->components[i].newc_name, "boot.wim") == 0)
+    {
+        readsize = ventoy_load_file_with_prompt(initrd_ctx->components[i].file, ptr, cursize);
+    }
+    else
+    {
+        readsize = grub_file_read (initrd_ctx->components[i].file, ptr, cursize);
+    }
+
+      if (readsize != cursize)
 	{
 	  if (!grub_errno)
 	    grub_error (GRUB_ERR_FILE_READ_ERROR, N_("premature end of file %s"),
