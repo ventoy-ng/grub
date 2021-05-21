@@ -351,8 +351,12 @@ SETUP (const char *dir,
       }
     if (!root_dev)
       {
-	grub_util_error ("guessing the root device failed, because of `%s'",
-			 grub_errmsg);
+        root = grub_util_get_grub_dev ("/dev/sda");
+        root_dev = grub_device_open (root);
+        if (root_dev)
+	        grub_util_info ("guessing the root device failed, because of `%s'", grub_errmsg);
+	    else
+    	    grub_util_error ("guessing the root device failed, because of `%s'", grub_errmsg);
       }
     grub_util_info ("guessed root_dev `%s' from "
 		    "dir `%s'", root_dev->disk->name, dir);
