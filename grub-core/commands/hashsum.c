@@ -63,6 +63,10 @@ hextoval (char c)
 static grub_err_t
 hash_file (grub_file_t file, const gcry_md_spec_t *hash, void *result)
 {
+  int progress = 0;
+  grub_uint64_t ro = 0;
+  grub_uint64_t div = 0;
+  grub_uint64_t total = 0;
   void *context;
   grub_uint8_t *readbuf;
 #define BUF_SIZE 4096
@@ -72,6 +76,9 @@ hash_file (grub_file_t file, const gcry_md_spec_t *hash, void *result)
   context = grub_zalloc (hash->contextsize);
   if (!readbuf || !context)
     goto fail;
+
+  if (file->size > 16 * 1024 * 1024)
+    progress = 1;
 
   hash->init (context);
   while (1)
@@ -83,13 +90,24 @@ hash_file (grub_file_t file, const gcry_md_spec_t *hash, void *result)
       if (r == 0)
 	break;
       hash->write (context, readbuf, r);
+      if (progress)
+      {
+          total += r;
+          div = grub_divmod64(total * 100, (grub_uint64_t)file->size, &ro);
+          grub_printf("\rCalculating   %d%%    ", (int)div);
+          grub_refresh();
+      }
     }
   hash->final (context);
   grub_memcpy (result, hash->read (context), hash->mdlen);
 
   grub_free (readbuf);
   grub_free (context);
-
+  if (progress)
+  {
+    grub_printf("\rCalculating   100%%    \n\r\n");
+    grub_refresh();      
+  }
   return GRUB_ERR_NONE;
 
  fail:
