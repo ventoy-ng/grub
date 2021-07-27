@@ -33,6 +33,7 @@ struct grub_loopback
   grub_file_t file;
   struct grub_loopback *next;
   unsigned long id;
+  grub_off_t skip;
 };
 
 static struct grub_loopback *loopback_list;
@@ -43,6 +44,7 @@ static const struct grub_arg_option options[] =
     /* TRANSLATORS: The disk is simply removed from the list of available ones,
        not wiped, avoid to scare user.  */
     {"delete", 'd', 0, N_("Delete the specified loopback drive."), 0, 0},
+    {"skip", 's', 0, "skip sectors of the file.", "SECTORS", ARG_TYPE_INT },
     {0, 0, 0, 0, 0, 0}
   };
 
@@ -81,6 +83,7 @@ grub_cmd_loopback (grub_extcmd_context_t ctxt, int argc, char **args)
   grub_file_t file;
   struct grub_loopback *newdev;
   grub_err_t ret;
+  grub_off_t skip = 0;
 
   if (argc < 1)
     return grub_error (GRUB_ERR_BAD_ARGUMENT, "device name required");
@@ -88,6 +91,9 @@ grub_cmd_loopback (grub_extcmd_context_t ctxt, int argc, char **args)
   /* Check if `-d' was used.  */
   if (state[0].set)
       return delete_loopback (args[0]);
+
+  if (state[1].set)
+      skip = (grub_off_t)grub_strtoull(state[1].arg, NULL, 10);
 
   if (argc < 2)
     return grub_error (GRUB_ERR_BAD_ARGUMENT, N_("filename expected"));
@@ -106,6 +112,7 @@ grub_cmd_loopback (grub_extcmd_context_t ctxt, int argc, char **args)
     {
       grub_file_close (newdev->file);
       newdev->file = file;
+      newdev->skip = skip;
 
       return 0;
     }
@@ -123,6 +130,7 @@ grub_cmd_loopback (grub_extcmd_context_t ctxt, int argc, char **args)
     }
 
   newdev->file = file;
+  newdev->skip = skip;
   newdev->id = last_id++;
 
   /* Add the new entry to the list.  */
@@ -187,9 +195,10 @@ grub_loopback_read (grub_disk_t disk, grub_disk_addr_t sector,
 		    grub_size_t size, char *buf)
 {
   grub_file_t file = ((struct grub_loopback *) disk->data)->file;
+  grub_off_t skip = ((struct grub_loopback *) disk->data)->skip;
   grub_off_t pos;
 
-  grub_file_seek (file, sector << GRUB_DISK_SECTOR_BITS);
+  grub_file_seek (file, (sector + skip) << GRUB_DISK_SECTOR_BITS);
 
   grub_file_read (file, buf, size << GRUB_DISK_SECTOR_BITS);
   if (grub_errno)
@@ -198,7 +207,7 @@ grub_loopback_read (grub_disk_t disk, grub_disk_addr_t sector,
   /* In case there is more data read than there is available, in case
      of files that are not a multiple of GRUB_DISK_SECTOR_SIZE, fill
      the rest with zeros.  */
-  pos = (sector + size) << GRUB_DISK_SECTOR_BITS;
+  pos = (sector + skip + size) << GRUB_DISK_SECTOR_BITS;
   if (pos > file->size)
     {
       grub_size_t amount = pos - file->size;
