@@ -87,6 +87,9 @@ struct grub_partition
   /* The type of partition whne it's on MSDOS.
      Used for embedding detection.  */
   grub_uint8_t msdostype;
+
+  /* The attrib field for GPT. Needed for priority detection. */
+  grub_uint64_t gpt_attrib;
 };
 
 grub_partition_t EXPORT_FUNC(grub_partition_probe) (struct grub_disk *disk,
