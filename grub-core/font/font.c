@@ -419,6 +419,8 @@ grub_font_load (const char *filename)
 
   if (filename[0] == '(' || filename[0] == '/' || filename[0] == '+')
     file = grub_buffile_open (filename, GRUB_FILE_TYPE_FONT, 1024);
+  else if (grub_strncmp(filename, "mem:", 4) == 0)
+    file = grub_buffile_open (filename, GRUB_FILE_TYPE_FONT, 1024);
   else
     {
       const char *prefix = grub_env_get ("prefix");
