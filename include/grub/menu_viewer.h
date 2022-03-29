@@ -31,6 +31,7 @@ struct grub_menu_viewer
   struct grub_menu_viewer *next;
   void *data;
   void (*set_chosen_entry) (int entry, void *data);
+  void (*scroll_chosen_entry) (void *data, int diren);
   void (*print_timeout) (int timeout, void *data);
   void (*clear_timeout) (void *data);
   void (*fini) (void *fini);

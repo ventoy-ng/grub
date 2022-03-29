@@ -1304,3 +1304,49 @@ grub_unicode_get_comb_end (const grub_uint32_t *end,
   return end;
 }
 
+int
+grub_utf8_get_num_code (const char *src, grub_size_t srcsize)
+{
+  int count = 0;
+  grub_uint32_t code = 0;
+  int num = 0;
+
+  while (srcsize)
+  {
+    if (srcsize != (grub_size_t) -1)
+      srcsize--;
+    if (!grub_utf8_process ((grub_uint8_t)*src++, &code, &count))
+      return 0;
+    if (count != 0)
+      continue;
+    if (code == 0 || code > GRUB_UNICODE_LAST_VALID)
+      return num;
+    ++num;
+  }
+  return num;
+}
+
+const char *
+grub_utf8_offset_code (const char *src, grub_size_t srcsize, int num)
+{
+  int count = 0;
+  grub_uint32_t code = 0;
+
+  while (srcsize && num)
+  {
+    if (srcsize != (grub_size_t) -1)
+      srcsize--;
+    if (!grub_utf8_process ((grub_uint8_t)*src++, &code, &count))
+      return 0;
+    if (count != 0)
+      continue;
+    if (code == 0 || code > GRUB_UNICODE_LAST_VALID)
+      return 0;
+    --num;
+  }
+
+  if (!num)
+    return src;
+
+  return 0;
+}

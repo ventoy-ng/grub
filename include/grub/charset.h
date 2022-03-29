@@ -320,4 +320,10 @@ const grub_uint32_t *
 grub_unicode_get_comb_start (const grub_uint32_t *str, 
 			     const grub_uint32_t *cur);
 
+int
+grub_utf8_get_num_code (const char *src, grub_size_t srcsize);
+
+const char *
+grub_utf8_offset_code (const char *src, grub_size_t srcsize, int num);
+
 #endif
