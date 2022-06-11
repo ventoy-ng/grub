@@ -37,7 +37,7 @@
 #include <grub/misc.h>
 #include <grub/types.h>
 
-static int LZ4_uncompress_unknownOutputSize(const char *source, char *dest,
+int LZ4_uncompress_unknownOutputSize(const char *source, char *dest,
 					    int isize, int maxOutputSize);
 
 /*
@@ -153,7 +153,7 @@ lz4_decompress(void *s_start, void *d_start, grub_size_t s_len, grub_size_t d_le
 	    d_len) < 0)?grub_error(GRUB_ERR_BAD_FS,"lz4 decompression failed."):0;
 }
 
-static int
+int
 LZ4_uncompress_unknownOutputSize(const char *source,
     char *dest, int isize, int maxOutputSize)
 {
