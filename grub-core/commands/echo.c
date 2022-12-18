@@ -25,10 +25,14 @@
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
+extern const char *ventoy_get_vmenu_title(const char *vMenu);
+
 static const struct grub_arg_option options[] =
   {
     {0, 'n', 0, N_("Do not output the trailing newline."), 0, 0},
     {0, 'e', 0, N_("Enable interpretation of backslash escapes."), 0, 0},
+    {0, 'v', 0, N_("ventoy menu language."), 0, 0},
+    {0, 'V', 0, N_("ventoy menu language with pre-newline."), 0, 0},
     {0, 0, 0, 0, 0, 0}
   };
 
@@ -36,12 +40,17 @@ static grub_err_t
 grub_cmd_echo (grub_extcmd_context_t ctxt, int argc, char **args)
 {
   struct grub_arg_list *state = ctxt->state;
+  char ch;
+  int vtmenu = 0;
   int newline = 1;
   int i;
 
   /* Check if `-n' was used.  */
   if (state[0].set)
     newline = 0;
+
+  if (state[2].set || state[3].set)
+    vtmenu = 1;
 
   for (i = 0; i < argc; i++)
     {
@@ -108,12 +117,36 @@ grub_cmd_echo (grub_extcmd_context_t ctxt, int argc, char **args)
 	}
 
       *p = '\0';
-      grub_xputs (unescaped);
-      grub_free (unescaped);
 
-      /* If another argument follows, insert a space.  */
-      if (i != argc - 1)
-	grub_printf (" " );
+    if (vtmenu && grub_strncmp(unescaped, "VTMENU_", 7) == 0) 
+    {
+        p = unescaped;
+        while ((*p >= 'A' && *p <= 'Z') || *p == '_')
+        {
+            p++;
+        }
+
+        ch = *p;
+        *p = 0;
+        if (state[3].set)
+        {
+            grub_xputs("\n");            
+        }
+        grub_xputs(ventoy_get_vmenu_title(unescaped));
+
+        *p = ch;
+        grub_xputs(p);
+    }
+    else    
+    {
+        grub_xputs (unescaped);
+    }
+    
+    grub_free (unescaped);
+
+    /* If another argument follows, insert a space.  */
+    if ((0 == vtmenu) && (i != argc - 1))
+	    grub_printf (" " );
     }
 
   if (newline)
