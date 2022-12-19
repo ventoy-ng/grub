@@ -53,6 +53,7 @@ struct grub_env_var *EXPORT_FUNC(grub_env_update_get_sorted) (void);
 grub_err_t EXPORT_FUNC(grub_register_variable_hook) (const char *name,
 						     grub_env_read_hook_t read_hook,
 						     grub_env_write_hook_t write_hook);
+grub_err_t EXPORT_FUNC(grub_register_vtoy_menu_lang_hook) (grub_env_read_hook_t read_hook);
 
 grub_err_t grub_env_context_open (void);
 grub_err_t grub_env_context_close (void);

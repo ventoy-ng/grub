@@ -28,6 +28,8 @@ static struct grub_env_context initial_context;
 /* The current context.  */
 struct grub_env_context *grub_current_context = &initial_context;
 
+static grub_env_read_hook_t vtoy_menu_lang_read_hook;
+
 /* Return the hash representation of the string S.  */
 static unsigned int
 grub_env_hashval (const char *s)
@@ -134,6 +136,9 @@ grub_env_get (const char *name)
 {
   struct grub_env_var *var;
 
+  if (name && vtoy_menu_lang_read_hook && grub_strncmp(name, "VTLANG_", 7) == 0)
+    return vtoy_menu_lang_read_hook(NULL, name);
+
   var = grub_env_find (name);
   if (! var)
     return 0;
@@ -214,6 +219,13 @@ grub_register_variable_hook (const char *name,
   var->read_hook = read_hook;
   var->write_hook = write_hook;
 
+  return GRUB_ERR_NONE;
+}
+
+grub_err_t
+grub_register_vtoy_menu_lang_hook(grub_env_read_hook_t read_hook)
+{
+  vtoy_menu_lang_read_hook = read_hook;
   return GRUB_ERR_NONE;
 }
 
